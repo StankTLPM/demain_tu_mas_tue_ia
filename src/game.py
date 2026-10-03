@@ -72,13 +72,40 @@ class GameState:
                 return None, False, "Distance trop grande ou non mouvement"
             if not (0 <= target_r < 4 and 0 <= target_c < 4):
                 return None, False, "Mouvement en dehors du plateau"
-            if self.boards[epoch][target_r][target_c] is not None:
-                return None, False, "Case d'arrivée occupée"
 
-            #Déplacement
-            self.boards[epoch][target_r][target_c] = piece
-            self.boards[epoch][r][c] = None
-            return (epoch, target_r, target_c), True, "Déplacement spatial réussi"
+            target_piece = self.boards[epoch][target_r][target_c]
+
+            #Déplacement si ca case visée est vide
+            if target_piece is None:
+                self.boards[epoch][target_r][target_c] = piece
+                self.boards[epoch][r][c] = None
+                return (epoch, target_r, target_c), True, "Déplacement spatial réussi"
+
+            #La case visée est occupé par un pion de la même couleur
+            elif target_piece == piece:
+                self.boards[epoch][target_r][target_c] = None
+                self.boards[epoch][r][c] = None
+                return None, True, "Collision entre deux pièces alliées"
+
+            #La case visée est occupée par un pion ennemi
+            else:
+                #direction du déplacement 
+                dr = target_r - r
+                dc = target_c - c
+
+                next_r = target_r + dr
+                next_c = target_c + dc
+
+                #Le pion attaquant prend la place du pion déplacé
+                self.boards[epoch][target_r][target_c] = piece
+                self.boards[epoch][r][c] = None
+
+                #Si on sort du plateau, le pion attaqué est détruit
+                if not (0 <= next_r < 4 and 0 <= next_c < 4):
+
+                    return (epoch, target_r, target_c), True, "Pion ejecté par le déplacement"
+
+                return self.execute_single_move(epoch, target_r, target_c, 'space', (next_r, next_c))
 
         #Mouvement temporel
         if move_type == 'time':
