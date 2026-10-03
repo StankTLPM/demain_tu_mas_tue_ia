@@ -133,6 +133,68 @@ class GameState:
 
         return None, False, "Mouvement inconnu"
 
+    def has_pieces_on_epoch(self, player, epoch):
+        """
+        Vérifie si le joueur a au moins un pion sur l'époque sur laquelle il joue
+        """
+        for r in range(4):
+            for c in range(4):
+                if self.boards[epoch][r][c] == player:
+                    return True
+        return False
+
+    def play_full_turn(self, start_pos, move1type, move1_param, move2type, move2_param, new_epoch):
+        """
+        Joue un tour complet pour le joueur actuel
+        - start_pos : couple (r,c) pour le pion qu'il choisi de jouer
+        - move1type / move1_param : le type (space/time) et les paramètres associés pour faire le premier mouvement
+        - move2type / move2_param : le type (space/time) et les paramètres associés pour faire le deuxième mouvement
+        - new_epoch : l'époque sur laquelle le joueur déplace son jeton à la fin du tour
+        """
+        player = self.current_player
+        current_epoch = self.player_epochs[player]
+
+        #Vérifier si le joueur a au moins une pièce dans cette époque
+        has_pieces = self.has_pieces_on_epoch(player, current_epoch)
+
+        if has_pieces:
+            if start_pos is None:
+                return False, "Vous devez choisir une case occupée par un de vos pions"
+
+            r, c = start_pos
+            #Vérifier que la case choisi est bien occupée par un pion du joueur 
+            if self.boards[current_epoch][r][c] != player:
+                return False, "Ce pion ne vous appartient pas ou il n'y a pas de pion"
+
+            #Premier Mouvement
+            new_pos, success1, msg1 = self.execute_single_move(current_epoch, r, c, move1type, move1_param)
+            if not success1:
+                return False, f"Echec du premier mouvement : {msg1}"
+
+            #Si le pion a disparu pendant le premier mouvement, on annule le deuxième
+            if new_pos is None:
+                print('Le pion a disparu pendant le premier mouvement, le second mouvement est annulé')
+            else:
+                #Deuxième Mouvement
+                next_epoch, next_r, next_c = new_pos
+                _, success2, msg2 = self.execute_single_move(new_epoch, next_r, next_c, move2type, move2_param)
+                if not success2:
+                    return False, f"Echec du deuxième mouvement : {msg2}"
+
+        else:
+            print(f"Aucun pion n'est disponible pour le joueur {player} à l'époque {current_epoch}")
+
+        #Changement d'époque obligatoire à la fin
+        success_epoch, msg_epoch = self.change_player_epoch(new_epoch)
+        if not success_epoch:
+            return False, f"Echec du changement d'époque : {msg_epoch}"
+
+        #Changement de joueur
+        self.current_player = 'N' if player == 'B' else 'B'
+        return True, 'Tour complété avec succès'
+
+            
+
 
 if __name__ == "__main__":
     game = GameState()
