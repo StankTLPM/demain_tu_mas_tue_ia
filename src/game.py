@@ -4,9 +4,9 @@ class GameState:
         #Les grilles sont initialisées à vide
         #Par convention, 0 est le passé, 1 est le présent et 2 est le futur
         self.boards = [
-            [[None for _ in range(4)] for _ in range(4)], #passé
-            [[None for _ in range(4)] for _ in range(4)], #présent
-            [[None for _ in range(4)] for _ in range(4)]  #futur
+            [['B'] + [None for _ in range(3)], [None for _ in range(4)], [None for _ in range(4)], [None for _ in range(3)] + ['N']], #passé
+            [['B'] + [None for _ in range(3)], [None for _ in range(4)], [None for _ in range(4)], [None for _ in range(3)] + ['N']], #présent
+            [['B'] + [None for _ in range(3)], [None for _ in range(4)], [None for _ in range(4)], [None for _ in range(3)] + ['N']]  #futur
         ]
 
         #Joueur actuel ('B' pour joueur 1, 'N' pour joueur 2)
