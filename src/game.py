@@ -53,6 +53,60 @@ class GameState:
         self.player_epochs[self.current_player] = new_epoch
         return True, "Epoque changée avec succès"
 
+    def execute_single_move(self, epoch, r, c, move_type, target_param):
+        """
+        Exécuter un mouvement unitaire parmi ceux possibles dans le jeu pour un pion situé à une époque epoch, sur la ligne r et la colonne c
+        - move_type 'space', mouvement latéral sur la même époque, target_param = (targetr, targetc)
+        - move_type 'time', mouvement dans une autre époque, target_param = int (nouvelle époque)
+        """
+        piece = self.boards[epoch][r][c]
+        if piece is None:
+            return None, False, "Aucun pion à cette position"
+
+        #Mouvement spatial
+        if move_type == 'space':
+            target_r, target_c = target_param
+
+            #Vérification mouvement adjacent non diagonal
+            if abs(r - target_r) + abs(c - target_c) != 1:
+                return None, False, "Distance trop grande ou non mouvement"
+            if not (0 <= target_r < 4 and 0 <= target_c < 4):
+                return None, False, "Mouvement en dehors du plateau"
+            if self.boards[epoch][target_r][target_c] is not None:
+                return None, False, "Case d'arrivée occupée"
+
+            #Déplacement
+            self.boards[epoch][target_r][target_c] = piece
+            self.boards[epoch][r][c] = None
+            return (epoch, target_r, target_c), True, "Déplacement spatial réussi"
+
+        #Mouvement temporel
+        if move_type == 'time':
+            target_epoch = target_param
+
+            #Vérification que le voyage se fait vers une époque adjacente
+            if abs(target_epoch - epoch) != 1:
+                return None, False, "Voyage vers une époque trop lointaine ou la même"
+
+            #La case d'arrivée doit être vide
+            if self.boards[target_epoch][r][c] is not None:
+                return None, False, "La case d'arrivée n'est pas libre"
+
+            #Règle de dépôt
+            if target_epoch < epoch:
+                #Vers une époque antérieure, on doit placer un nouveau jeton sur la case libérée (on n'enlève pas le jeton actuel en mettant à jour le plateau)
+                self.boards[target_epoch][r][c] = piece
+                return (target_epoch, r, c), True, f"Voyage temporel vers {target_epoch} réussi"
+
+            if target_epoch > epoch:
+                #Vers une époque postérieure, on ne place pas de jeton, le jeton est donc retiré lorsque l'on met à jour le board
+                self.boards[target_epoch][r][c] = piece
+                self.boards[epoch][r][c] = None
+                return (target_epoch, r, c), True, f"Voyage temporel vers {target_epoch} réussi"
+
+        return None, False, "Mouvement inconnu"
+
+
 if __name__ == "__main__":
     game = GameState()
     print("Etat du système initial")
