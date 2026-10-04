@@ -17,6 +17,9 @@ class GameState:
         #Joueur 2 commence dans le futur
         self.player_epochs = {'B': 0, 'N': 2}
 
+        #Les jetons en réserve permettent aux joueurs de se déplacer vers une époque antérieure
+        self.player_reserves = {'B': 4, 'N': 4}
+
     def print_boards(self):
         #Afficher le plateau de manière lisible dans la console et montre la position époque des joueurs
         board_names = ["Passé", "Présent", "Futur"]
@@ -122,6 +125,13 @@ class GameState:
             #Règle de dépôt
             if target_epoch < epoch:
                 #Vers une époque antérieure, on doit placer un nouveau jeton sur la case libérée (on n'enlève pas le jeton actuel en mettant à jour le plateau)
+                #Il faut donc vérifier si le joueur possède au moins un jeton en réserve
+                if self.player_reserves[self.current_player] <= 0:
+                    return None, False, "Réserve vide : impossible de voyager vers une époque antérieure"
+
+                #Enlever un jeton de la réserve du joueur
+                self.player_reserves[self.current_player] -= 1
+                
                 self.boards[target_epoch][r][c] = piece
                 return (target_epoch, r, c), True, f"Voyage temporel vers {target_epoch} réussi"
 
