@@ -131,7 +131,7 @@ class GameState:
 
                 #Enlever un jeton de la réserve du joueur
                 self.player_reserves[self.current_player] -= 1
-                
+
                 self.boards[target_epoch][r][c] = piece
                 return (target_epoch, r, c), True, f"Voyage temporel vers {target_epoch} réussi"
 
@@ -187,7 +187,7 @@ class GameState:
             else:
                 #Deuxième Mouvement
                 next_epoch, next_r, next_c = new_pos
-                _, success2, msg2 = self.execute_single_move(new_epoch, next_r, next_c, move2type, move2_param)
+                _, success2, msg2 = self.execute_single_move(next_epoch, next_r, next_c, move2type, move2_param)
                 if not success2:
                     return False, f"Echec du deuxième mouvement : {msg2}"
 
@@ -233,5 +233,17 @@ class GameState:
 
 if __name__ == "__main__":
     game = GameState()
-    print("Etat du système initial")
+    game.print_boards()
+
+    #Le joueur 'B' est dans le passé 0, son pion en (0,0) bouge en (1,0) puis va dans le présent 1. Il déplace son jeton époque dans le présent 1
+    print('--- Exécution du premier tour pour B ---')
+    success, message = game.play_full_turn(
+        start_pos=(0, 0),
+        move1type='space',
+        move1_param=(1,0),
+        move2type='time',
+        move2_param=1,
+        new_epoch=1
+    )
+    print(message)
     game.print_boards()
