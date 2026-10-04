@@ -1,3 +1,5 @@
+import copy
+
 class GameState:
     def __init__(self):
         #Représentation du plateau, 3 plateaux 4x4 (passé, présent, futur)
@@ -230,20 +232,122 @@ class GameState:
                 return player #Le joueur actuel gagne
         return None
 
+    def clone(self):
+        """
+        Créer une copie de l'état du jeu actuel
+        """
+        new_game = GameState()
+        new_game.boards = copy.deepcopy(self.boards)
+        new_game.current_player = self.current_player
+        new_game.player_epochs = self.player_epochs.copy()
+        new_game.player_reserves = self.player_reserves.copy()
+        return new_game
+
+    def get_legal_actions(self):
+        """
+        Retourne la liste de tous les coups légaux possibles pour le joueur actuel.
+        Chaque coup est un tuple : (start_pos, mov1, mov2, new_epoch)
+        """
+        player = self.current_player
+        current_epoch = self.player_epochs[player]
+        legal_actions = []
+
+        #Les époques possibles pour le choix à la fin du tour
+        other_epochs = [e for e in range(3) if e != current_epoch]
+
+        # Vérifier si le joueur a des pions sur son époque actuelle
+        has_pieces = self.has_pieces_on_epoch(player, current_epoch)
+
+        if not has_pieces:
+            #Si aucun pion sur l'époque, la seule chose à faire c'est changé d'époque
+            for new_epoch in other_epochs:
+                legal_actions.append((None, None, None, new_epoch))
+            return legal_actions
+
+        #Faire l'inventaire des pions disponibles sur l'époque actuelle du joueur
+        piece_positions = []
+        for r in range(4):
+            for c in range(4):
+                if self.boards[current_epoch][r][c] == player:
+                    piece_positions.append((r, c))
+
+        #Faire l'inventaire des movements spatiaux possibles
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        #Faire l'inventaire des mouvements temporels disponibles
+        time_epochs = [current_epoch - 1, current_epoch + 1]
+
+        #Pour chaque pion, on regarde les mouvements disponibles
+        for pos in piece_positions:
+            r, c = pos
+
+            #Regarder le premier mouvements
+            possible_move_1 = []
+
+            #Mouvements spatiaux
+            for dr, dc in directions:
+                tr, tc = r + dr, c + dc
+                if 0 <= tr < 4 and 0 <= tc < 4:
+                    possible_move_1.append(('space', (tr, tc)))
+
+            #Mouvements temporels
+            for te in time_epochs:
+                if 0 <= te < 3:
+                    possible_move_1.append(('time', te))
+
+            #Tester chaque premier mouvement
+            for m1_type, m1_param in possible_move_1:
+                #On clone l'état du système après le premier mouvement
+                sim_game = self.clone()
+                res1 = sim_game.execute_single_move(current_epoch, r, c, m1_type, m1_param)
+
+                #Si le premier mouvement est invalide, on passe
+                if not res1[1]:
+                    continue
+
+                new_pos = res1[0] # (new_epoch, new_r, new_c) ou None si le pion a disparu
+
+                #Si le pion a disparu lors du premier mouvement (collision)
+                if new_pos is None:
+                    #Le pion a disparu donc pas de deuxième mouvement disponible
+                    #Le tour se termine par le changement d'époque
+                    for new_epoch in other_epochs:
+                        legal_actions.append((pos, (m1_type, m1_param), None, new_epoch))
+                    continue
+
+                #Sinon, le pion a bougé et il faut regarder les mouvements à partir de la nouvelle position
+                next_epoch, next_r, next_c = new_pos
+                possible_move_2 = []
+
+                #Mouvements spatiaux depuis la nouvelle position
+                for dr, dc in directions:
+                    tr, tc = next_r + dr, next_c + dc
+                    if 0 <= tr < 4 and 0 <= tc < 4:
+                        possible_move_2.append(('space', (tr, tc)))
+
+                #Mouvements temporels depuis la nouvelle position
+                for te in time_epochs:
+                    if 0 <= te < 3:
+                        possible_move_2.append(('time', te))
+
+                #Tester les deuxièmes mouvements
+                for m2_type, m2_param in possible_move_2:
+                    sim_game2 = sim_game.clone()
+                    res2 = sim_game2.execute_single_move(next_epoch, next_r, next_c, m2_type, m2_param)
+
+                    if not res2[1]:
+                        continue # Deuxième mouvement invalide
+
+                    #Enfin, pour chaque configuration possible de deux mouvements, le joueur choisi la prochaine époque
+                    for new_epoch in other_epochs:
+                        legal_actions.append((pos, (m1_type, m1_param), (m2_type, m2_param), new_epoch))
+
+        return legal_actions
+
 
 if __name__ == "__main__":
     game = GameState()
-    game.print_boards()
-
-    #Le joueur 'B' est dans le passé 0, son pion en (0,0) bouge en (1,0) puis va dans le présent 1. Il déplace son jeton époque dans le présent 1
-    print('--- Exécution du premier tour pour B ---')
-    success, message = game.play_full_turn(
-        start_pos=(0, 0),
-        move1type='space',
-        move1_param=(1,0),
-        move2type='time',
-        move2_param=1,
-        new_epoch=1
-    )
-    print(message)
-    game.print_boards()
+    legal_moves = game.get_legal_actions()
+    print(f"Nombre de coups légaux au premier tour pour B : {len(legal_moves)}")
+    print("Coups légaux :")
+    for move in legal_moves:
+        print(move)
