@@ -189,11 +189,36 @@ class GameState:
         if not success_epoch:
             return False, f"Echec du changement d'époque : {msg_epoch}"
 
+        #Vérification qu'aucun joueur n'a gagné
+        winner = self.check_win_condition()
+        if winner:
+            return True, f"Victoire de {winner}, l'adversaire a été effacé de l'histoire !"
+
         #Changement de joueur
         self.current_player = 'N' if player == 'B' else 'B'
         return True, 'Tour complété avec succès'
 
-            
+    def count_epoch_with_pieces(self, player):
+        """
+        Compte le nombre d'époques dans lesquelles le joueur est disponible
+        """
+        count = 0
+        for epoch_idx in range(3):
+            if self.has_pieces_on_epoch(player, epoch_idx):
+                count += 1
+        return count
+
+    def check_win_condition(self):
+        """
+        Vérifie si la partie est terminée et annonce le gagnant.
+        Un joueur gagne si son adversaire, au début ou à la fin de son tour n'est disponible que sur au plus une époque
+        Retourne 'B', 'N' ou None si la partie continue
+        """
+        for player in ['B', 'N']:
+            opponent = 'N' if player == 'B' else 'B'
+            if self.count_epoch_with_pieces(opponent) <= 1:
+                return player #Le joueur actuel gagne
+        return None
 
 
 if __name__ == "__main__":
