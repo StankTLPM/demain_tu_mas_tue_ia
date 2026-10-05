@@ -348,10 +348,10 @@ class GameState:
         """
         Afin de faire lire le modèle à un réseau de neurones,
         On code toutes les informations de l'état du jeu à un instant t sous forme de tensuer
-        Return NumPy tensor (8, 4, 4)
+        Return NumPy tensor (10, 4, 4)
         """
-        #Initialisation du tenseur 8 canaux de taille 4x4 à 0
-        tensor = np.zeros((8, 4, 4), dtype=np.float32)
+        #Initialisation du tenseur 10 canaux de taille 4x4 à 0
+        tensor = np.zeros((10, 4, 4), dtype=np.float32)
 
         current_p = self.current_player
         opponent_p = 'N' if current_p == 'B' else 'B'
@@ -374,6 +374,14 @@ class GameState:
         opponent_epoch_val = self.player_epochs[opponent_p] / 2.0
         tensor[7, :, :] = opponent_epoch_val
 
+        #Replissage du canal 8 pour la réserve du joeur actuel
+        current_reserve = self.player_reserves[current_p] / 4
+        tensor[8, :, :] = current_reserve
+
+        #Remplissage du canal 9 pour la réserve de l'adversaire
+        opponent_reserve = self.player_reserves[opponent_p] / 4
+        tensor[9, :, :] = opponent_reserve
+
         return tensor
 
 
@@ -383,4 +391,4 @@ if __name__ == "__main__":
     print("Forme du tenseur d'état", state_tensor.shape)
     print("Somme des valeurs dans le tenseur", np.sum(state_tensor))
     print("Forme du tenseur", state_tensor)
-    
+    print("Reserve de l'aversaire", state_tensor[8, 0, 0])
