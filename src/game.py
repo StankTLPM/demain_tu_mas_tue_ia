@@ -1,4 +1,5 @@
 import copy
+import numpy as np
 
 class GameState:
     def __init__(self):
@@ -343,11 +344,43 @@ class GameState:
 
         return legal_actions
 
+    def vectorize(self):
+        """
+        Afin de faire lire le modèle à un réseau de neurones,
+        On code toutes les informations de l'état du jeu à un instant t sous forme de tensuer
+        Return NumPy tensor (8, 4, 4)
+        """
+        #Initialisation du tenseur 8 canaux de taille 4x4 à 0
+        tensor = np.zeros((8, 4, 4), dtype=np.float32)
+
+        current_p = self.current_player
+        opponent_p = 'N' if current_p == 'B' else 'B'
+
+        #Remplissage de 6 premiers canaux représentant les plateaux de jeux des jeux joueurs
+        for epoch_idx in range(3):
+            for r in range(4):
+                for c in range(4):
+                    piece = self.boards[epoch_idx][r][c]
+                    if piece == current_p:
+                        tensor[epoch_idx][r][c] = 1.0
+                    elif piece == opponent_p:
+                        tensor[3 + epoch_idx][r][c] = 1.0
+
+        #Remplissage du canal 6 pour le jeton époque du joueur actuel
+        current_epoch_val = self.player_epochs[current_p] / 2.0
+        tensor[6, :, :] = current_epoch_val
+
+        #Remplissage du canal 7 pour le jeton époque de l'adversaire
+        opponent_epoch_val = self.player_epochs[opponent_p] / 2.0
+        tensor[7, :, :] = opponent_epoch_val
+
+        return tensor
+
 
 if __name__ == "__main__":
     game = GameState()
-    legal_moves = game.get_legal_actions()
-    print(f"Nombre de coups légaux au premier tour pour B : {len(legal_moves)}")
-    print("Coups légaux :")
-    for move in legal_moves:
-        print(move)
+    state_tensor = game.vectorize()
+    print("Forme du tenseur d'état", state_tensor.shape)
+    print("Somme des valeurs dans le tenseur", np.sum(state_tensor))
+    print("Forme du tenseur", state_tensor)
+    
