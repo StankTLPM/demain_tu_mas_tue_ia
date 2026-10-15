@@ -151,10 +151,115 @@ def main_gui():
                 if click_pos:
                     epoch_idx, r, c = click_pos
 
+                    #ETAPE 1 : SELECTION DU PION
+                    if state == 'SELECT_PIECE':
+                        if epoch_idx == current_epoch and game.boards[epoch_idx][r][c] == player:
+                            selected_start = (epoch_idx, r, c)
+                            state = 'SELECT_MOVE_1'
+                            message = "1er mouvement: Cliquez sur une case adjacente (space) ou sur la même case d'une autre époque (time)"
+                        else:
+                            message = "Sélection invalide, choisissez un pion de votre époque"
+
+                    #ETAPE 2 : SELECTION DU PREMIER MOUVEMENT
+                    elif state == 'SELECT_MOVE_1':
+                        start_epoch, sr, sc = selected_start
+
+                        if epoch_idx == start_epoch:
+                            if abs(r - sr) + abs (c - sc) == 1:
+                                m1 = ('space', (r, c))
+                        elif abs(epoch_idx - start_epoch) == 1:
+                            if r == sr and c == sc:
+                                m1 = ('time', epoch_idx)
+
+                        if m1:
+                            #Tester le premier mouvement sur une simulation
+                            sim_game = game.clone()
+                            res1 = sim_game.execute_single_move(start_epoch, sr, sc, m1[0], m1[1])
+
+                            if res1[1]:
+                                current_pos_sim = res1[0]
+                                if current_pos_sim is None:
+                                    #Le pion a disparu suite à une collision
+                                    message = "Collision ! Le pion a disparu, choisissez une nouvelle époque."
+                                    state = 'SELECT_NEW_EPOCH'
+                                else:
+                                    state = 'SELECT_MOVE_2'
+                                    message = "2ème mouvement : déplacez ce pion à nouveau (ou recommencez avec ECHAP)."
+                            else:
+                                message = f"Mouvement illégal : {res1[2]}"
+                                m1 = None
+                        else:
+                            message = "Mouvement invalide (doit être orthogonal ou temporel adjacent)."
+
+                    #ETAPE 3 : SELECTION DU DEUXIEME MOUVEMENT
+                    elif state == 'SELECT_MOVE_2':
+                        curr_e, cr, cc = current_pos_sim
+
+                        if epoch_idx == curr_e:
+                            if abs(r - cr) + abs(c - cc) == 1:
+                                m2 = ('space', (r, c))
+                        elif abs(epoch_idx - curr_e) == 1:
+                            if r == cr and c == cc:
+                                m2 = ('time', epoch_idx)  
+
+                        if m2:
+                            res2 = sim_game.execute_single_move(curr_e, cr, cc, m2[0], m2[1])
+                            if res2[1]:
+                                state = 'SELECT_NEW_EPOCH'
+                                message = "Tour valide ! Choisissez votre nouvelle époque (cliquez sur le titre d'une autre époque)."
+                            else:
+                                message = f"2ème mouvement illégal : {res2[2]}"
+                                m2 = None
+                        else:
+                            message = "2ème mouvement invalide !"
+
+                    #ETAPE 4 : SELECTION NOUVELLE EPOQUE
+                    elif state == 'SELECT_NEW_EPOCH':
+                        other_epochs = [e for e in range(3) if e != current_epoch]
+                        if epoch_idx in other_epochs:
+                            #Tout est prêt, on valide le tour dans le vrai jeu
+                            s_pos = (selected_start[1], selected_start[2]) if has_pieces else None
+                            m1_t, m1_p = m1 if m1 else (None, None)
+                            m2_t, m2_p = m2 if m2 else (None, None)
+
+                            success, msg = game.play_full_turn(s_pos, m1_t, m1_p, m2_t, m2_p, epoch_idx)
+
+                            if success:
+                                #Réinitialiser pour le tour suivant
+                                state = 'SELECT_PIECE'
+                                selected_start = None
+                                m1, m2 = None, None
+                                message = f"Tour réussi ! C'est au tour de {game.current_player}."
+                            else:
+                                message = f"Erreur de validation : {msg}"
+                                state = 'SELECT_PIECE'
+                        else:
+                            message = "Vous devez choisir une autre époque que l'époque actuelle."
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    #Réinitialiser la sélection en cours
+                    state = 'SELECT_PIECE'
+                    selected_start = None
+                    m1, m2 = None, None
+                    message = "Tour réinitialisé. Sélectionnez un pion."
+        
+        
         #Affichage des informations générales
-        info_text = f"Tour de joueur : {game.current_player} | Réserves -> B : {game.player_reserves['B']} | N : {game.player_reserves['N']}"
-        txt_surf = FONT_BOLD.render(info_text, True, TEXT_COLOR)
-        SCREEN.blit(txt_surf, (50, 30))
+        info_surf = FONT_BOLD.render(f"Tour : Joueur {player} | Réserves -> B : {game.player_reserves['B']} | N : {game.player_reserves['N']}", True, TEXT_COLOR)
+        SCREEN.blit(info_surf, (50, 20))
+
+        msg_surf = FONT.render(message, True, (180, 50, 50) if "illégal" in message or "invalide" in message else (0, 100, 0))
+        SCREEN.blit(msg_surf, (50, 50))
+
+        hint_surf = FONT.render("(Appuyez sur ECHAP pour réinitialiser votre sélection en cours)", True, (120, 120, 120))
+        SCREEN.blit(hint_surf, (50, 80))
+
+        winner = game.check_win_condition()
+        if winner:
+            win_surf = FONT_BOLD.render(f"VICTOIRE DU JOUEUR {winner} !", True, (200, 0, 0))
+            SCREEN.blit(win_surf, (WIDTH // 2 - win_surf.get_width()//2, HEIGHT - 40))
+        
 
         #Affichage des trois plateaux
         for idx in range(3):
@@ -162,7 +267,9 @@ def main_gui():
             is_b_where = (game.player_epochs['B'] == idx)
             is_n_where = (game.player_epochs['N'] == idx)
 
-            draw_board_grid(SCREEN, bx, by, grid_size, game.boards[idx], board_names[idx], is_b_where, is_n_where)
+            sel = selected_start if (state in ['SELECT_MOVE_1', 'SELECT_MOVE_2'] and selected_start and selected_start[0] == idx) else None
+            
+            draw_board_grid(SCREEN, bx, by, grid_size, game.boards[idx], board_names[idx], is_b_where, is_n_where, sel)
 
         pygame.display.flip()
         clock.tick(30)
