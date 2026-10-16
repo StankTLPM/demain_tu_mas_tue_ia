@@ -250,10 +250,10 @@ def main_gui():
         SCREEN.blit(info_surf, (50, 20))
 
         msg_surf = FONT.render(message, True, (180, 50, 50) if "illégal" in message or "invalide" in message else (0, 100, 0))
-        SCREEN.blit(msg_surf, (50, 50))
+        SCREEN.blit(msg_surf, (50, 390))
 
         hint_surf = FONT.render("(Appuyez sur ECHAP pour réinitialiser votre sélection en cours)", True, (120, 120, 120))
-        SCREEN.blit(hint_surf, (50, 80))
+        SCREEN.blit(hint_surf, (50, 420))
 
         winner = game.check_win_condition()
         if winner:
