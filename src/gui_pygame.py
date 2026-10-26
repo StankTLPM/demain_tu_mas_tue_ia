@@ -1,7 +1,41 @@
 import pygame 
 import sys
 from game import GameState
+import os
+import torch
+import numpy as np
 
+def save_game_history(history, winner):
+    """
+    history : liste de tuples retraçant les coups d'une partie
+    winner : 'B', 'N' ou 'Draw'
+    """
+    if not history:
+        return
+
+    X_data = []
+    Y_data = []
+
+    for state_tensor, player in history:
+        if winner == 'Draw':
+            reward = 0.0
+        elif winner == player:
+            reward = 1.0
+        else:
+            reward = -1.0
+
+        X_data.append(state_tensor)
+        Y_data.append([reward])
+
+    #Créer un dossier 'data' s'il n'existe pas
+    os.makedir("data", exist_ok=True)
+    filename = f"data/game_vs_human_{winner}_{os.urandom(4).hex()}.pt"
+
+    torch.save({'X': torch.tensor(np.array(X_data, dtype=np.float32)),
+                'y': torch.tensor(np.array(Y_data, dtypa=np.float32))
+                }, filename)
+    print(f"[SUCCES] Partie enregistrée dans {filename}")
+    
 #Initialisation de pygame
 pygame.init()
 
