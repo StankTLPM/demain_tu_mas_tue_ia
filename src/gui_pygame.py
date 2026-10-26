@@ -35,7 +35,7 @@ def save_game_history(history, winner):
                 'y': torch.tensor(np.array(Y_data, dtypa=np.float32))
                 }, filename)
     print(f"[SUCCES] Partie enregistrée dans {filename}")
-    
+
 #Initialisation de pygame
 pygame.init()
 
@@ -152,6 +152,7 @@ def main_gui():
 
     #Etat du tour : 'SELECT_PIECE', 'SELECT_MOVE_1', 'SELECT_MOVE_2', 'SELECT_NEW_EPOCH'
     state = 'SELECT_PIECE'
+    game_history = [] #Enregistrement des parties
 
     selected_start = None
     m1 = None
@@ -259,6 +260,10 @@ def main_gui():
                             success, msg = game.play_full_turn(s_pos, m1_t, m1_p, m2_t, m2_p, epoch_idx)
 
                             if success:
+                                #Enregistrement des parties
+                                state_tensor = game.vectorize()
+                                game_history.append((state_tensor, player))
+
                                 #Réinitialiser pour le tour suivant
                                 state = 'SELECT_PIECE'
                                 selected_start = None
@@ -293,8 +298,12 @@ def main_gui():
         if winner:
             win_surf = FONT_BOLD.render(f"VICTOIRE DU JOUEUR {winner} !", True, (200, 0, 0))
             SCREEN.blit(win_surf, (WIDTH // 2 - win_surf.get_width()//2, HEIGHT - 40))
-        
 
+            #Sauvegarde de la partie 
+            if game_history:
+                save_game_history(game_history, winner)
+                game_history.clear()
+        
         #Affichage des trois plateaux
         for idx in range(3):
             bx, by = board_positions[idx]
