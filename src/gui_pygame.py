@@ -28,11 +28,11 @@ def save_game_history(history, winner):
         Y_data.append([reward])
 
     #Créer un dossier 'data' s'il n'existe pas
-    os.makedir("data", exist_ok=True)
+    os.makedirs("data", exist_ok=True)
     filename = f"data/game_vs_human_{winner}_{os.urandom(4).hex()}.pt"
 
     torch.save({'X': torch.tensor(np.array(X_data, dtype=np.float32)),
-                'y': torch.tensor(np.array(Y_data, dtypa=np.float32))
+                'y': torch.tensor(np.array(Y_data, dtype=np.float32))
                 }, filename)
     print(f"[SUCCES] Partie enregistrée dans {filename}")
 
@@ -160,11 +160,24 @@ def main_gui():
     sim_game = None
     current_pos_sim = None
 
+    game_over = False
+    winner = None #Compteur pour suivre la partie
+
     message = 'Cliquez sur l un des pions de votre époque actuelle'
 
     running = True
     while running:
         SCREEN.fill(BG_COLOR)
+
+        #Vérification de la condition de victoire
+        if not game_over:
+            winner = game.check_win_condition()
+            if winner:
+                game_over = True
+                message = f"VICTOIRE DU JOUEUR {winner} ! Cliquez n'importe où pour rejouer !"
+                #Sauvegarder la partie une seule fois
+                if game_history:
+                    save_game_history(game_history, winner)
 
         player = game.current_player
         current_epoch = game.player_epochs[player]
@@ -181,6 +194,18 @@ def main_gui():
                 running = False
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                #Si la partie est finie, on en relance 1
+                if game_over:
+                    game = GameState()
+                    game_history = []
+                    state = 'SELECT_PIECE'
+                    selected_start = 'None'
+                    m1, m2 = None, None
+                    game_over = False
+                    winner = None
+                    message = "Nouvelle partie ! Cliquez sur un de vos pions."
+                    continue
+
                 click_pos = get_board_and_mouse = get_board_and_cell_from_mouse(event.pos)
 
                 if click_pos:
@@ -291,7 +316,8 @@ def main_gui():
         msg_surf = FONT.render(message, True, (180, 50, 50) if "illégal" in message or "invalide" in message else (0, 100, 0))
         SCREEN.blit(msg_surf, (50, 390))
 
-        hint_surf = FONT.render("(Appuyez sur ECHAP pour réinitialiser votre sélection en cours)", True, (120, 120, 120))
+        hint_text = "Cliquez n'importe où pour lancer une nouvelle partie !" if game_over else "(Appuyez sur ECHAP pour réinitialiser votre sélection en cours)"
+        hint_surf = FONT.render(hint_text, True, (120, 120, 120))
         SCREEN.blit(hint_surf, (50, 420))
 
         winner = game.check_win_condition()
