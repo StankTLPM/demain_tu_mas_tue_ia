@@ -81,7 +81,7 @@ class GameState:
 
             target_piece = self.boards[epoch][target_r][target_c]
 
-            #Déplacement si ca case visée est vide
+            #Déplacement si la case visée est vide
             if target_piece is None:
                 self.boards[epoch][target_r][target_c] = piece
                 self.boards[epoch][r][c] = None
@@ -95,23 +95,42 @@ class GameState:
 
             #La case visée est occupée par un pion ennemi
             else:
-                #direction du déplacement 
                 dr = target_r - r
                 dc = target_c - c
 
                 next_r = target_r + dr
                 next_c = target_c + dc
-
-                #Le pion attaquant prend la place du pion déplacé
-                self.boards[epoch][target_r][target_c] = piece
                 self.boards[epoch][r][c] = None
+                self.boards[epoch][target_r][target_c] = piece
 
-                #Si on sort du plateau, le pion attaqué est détruit
                 if not (0 <= next_r < 4 and 0 <= next_c < 4):
-
+                
                     return (epoch, target_r, target_c), True, "Pion ejecté par le déplacement"
 
-                return self.execute_single_move(epoch, target_r, target_c, 'space', (next_r, next_c))
+                elif self.boards[epoch][next_r][next_c] is None:
+                    self.boards[epoch][next_r][next_c] = 'N' if piece == 'B' else 'B'
+                    return (epoch, target_r, target_c), True, "Pion poussé par le premier"
+
+
+                elif self.boards[epoch][next_r][next_c] == piece:
+                    self.boards[epoch][next_r][next_c] = 'N' if piece == 'B' else 'B'
+                    next_r += r
+                    next_c += c
+                    if not (0 <= next_r < 4 and 0 <= next_c < 4):
+
+                        return (epoch, target_r, target_c), True, "Pion ejecté par le déplacement"
+
+                    elif self.boards[epoch][next_r][next_c] is None:
+                        self.boards[epoch][next_r][next_c] = piece
+                        return (epoch, target_r, target_c), True, "Pion poussé par le déplacement"
+
+                    elif self.boards[epoch][next_r][next_c] != piece:
+                        self.boards[epoch][next_r][next_c] = piece
+                        return (epoch, target_r, target_c), True, "Cascade de poussées"
+
+
+                
+            return (epoch, target_r, target_c), True, "Pion poussé par le déplacement"
 
         #Mouvement temporel
         if move_type == 'time':
