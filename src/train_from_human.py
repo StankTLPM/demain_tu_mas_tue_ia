@@ -27,8 +27,9 @@ def train_on_human_data():
 
     model = TsuNet()
     #Charger des poinds précédents si disponibles
-    if os.path.exists("tsunet_weights.pts"):
-        model.load_state_dict(torch.load("tsunet_weights.pts"))
+    if os.path.exists("tsunet_weights.pth"):
+        print("go")
+        model.load_state_dict(torch.load("tsunet_weights.pth"))
         print('Anciens poids chargés.')
 
     model.train()
